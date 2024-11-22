@@ -1,0 +1,71 @@
+from pydantic import BaseModel, Field
+from langchain_core.prompts.prompt import PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_groq.chat_models import ChatGroq
+from pprint import pprint
+
+# Define the Pydantic model for response validation
+class ExtractedInformation(BaseModel):
+    name: str = Field(description="Name of the person")
+    father_name: str = Field(description="Father's name of the person")
+    age: int = Field(description="Age of the person")
+    gender: str = Field(description="Gender of the person")
+    date_of_birth: str = Field(description="Date of birth of the person (DD-MM-YYYY format)")
+    education: str = Field(description="Education of the person")
+    profession: str = Field(description="Profession of the person")
+
+# Use JsonOutputParser with the Pydantic model
+output_parser = JsonOutputParser(pydantic_object=ExtractedInformation)
+
+context = """David Jonathan Smith, a 32-year-old male, is a software engineer known for his innovative
+approach to solving complex technical problems. Born on April 12, 1992, in San Francisco, California,
+David developed an early interest in computers and technology. He pursued his passion academically,
+earning a Bachelor's degree in Computer Science from Stanford University in 2014. Later, he completed a Master's in Artificial Intelligence
+from the Massachusetts Institute of Technology (MIT) in 2017.Professionally, David has built a career 
+specializing in AI and machine learning, working as a senior engineer at a leading tech firm. 
+He has contributed to several groundbreaking projects, including  advancements in natural language processing
+and autonomous systems. His father, Richard Alan Smith, a retired physicist, greatly influenced David's 
+curiosity for science and his methodical approach to problem-solving. In addition to his professional 
+achievements, David enjoys mentoring young coders, often volunteering at community tech workshops. 
+Outside of work, he has a passion for hiking and photography, frequently exploring the scenic landscapes of Northern California. David's dedication to innovation, coupled with his strong academic background and supportive upbringing, has made him a respected figure both in his professional field and his local community."""
+
+format_instructions = """
+Please extract the following details from the context:
+- Name of the person
+- Father's name of the person
+- Age of the person
+- Gender of the person
+- Date of birth of the person in DD-MM-YYYY format
+- Education of the person
+- Profession of the person
+
+The output should be a JSON object containing these details.
+"""
+
+prompt = """
+    You are an assistant that has to extract the following required information from the context provided.
+    Context: {context}
+    Format Instructions: {format_instructions}
+"""
+
+# Create a prompt template with variables
+prompt_template = PromptTemplate(
+    template=prompt, 
+    input_variables=["context", "format_instructions"]
+)
+
+llm = ChatGroq(
+    model_name="llama3-70b-8192",
+    groq_api_key="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"
+)
+
+# Chain the prompt template, LLM, and output parser
+chain = prompt_template | llm | output_parser
+
+# Invoke the chain with the context and format_instructions
+response = chain.invoke({"context": context, "format_instructions": format_instructions})
+
+# Parsing and printing the response
+# pprint(response)
+print(response)
+
